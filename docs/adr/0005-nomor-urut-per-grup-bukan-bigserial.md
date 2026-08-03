@@ -33,8 +33,15 @@ returning op_seq into new.seq;
 ```
 
 `UPDATE` mengunci baris grup itu, sehingga penyisipan lain ke grup yang sama
-menunggu sampai transaksi ini selesai. Nomor jadi berurutan rapat, tanpa celah,
-dan tidak pernah terlihat terbalik oleh klien mana pun.
+menunggu sampai transaksi ini selesai. Nomor tidak pernah terlihat terbalik oleh
+klien mana pun.
+
+Perlu ditegaskan supaya tidak melebih-lebihkan: **yang dijamin adalah urutan yang
+terlihat, bukan ketiadaan celah.** Pengiriman ulang yang berakhir `ON CONFLICT DO
+NOTHING` tetap sempat menjalankan trigger dan memakai satu nomor, sehingga celah
+kecil bisa muncul. Celah tidak merusak apa pun — klien menarik dengan
+`seq > kursor`, bukan menghitung mundur satu per satu. Yang fatal hanyalah nomor
+kecil yang muncul setelah nomor besar, dan itulah yang dicegah di sini.
 
 Trigger juga selalu menimpa nilai `seq` yang dikirim klien: penomoran adalah
 wewenang server, dan klien tidak boleh bisa memilih tempatnya sendiri dalam
@@ -46,8 +53,6 @@ urutan.
 
 - Kursor sederhana berupa satu bilangan bulat menjadi benar-benar aman. Tidak
   perlu jendela tumpang tindih, penarikan ulang berkala, atau pelacakan celah.
-- Nomor rapat tanpa celah juga membuat masalah mudah dilihat: melompatnya nomor
-  berarti ada yang salah, bukan hal biasa.
 
 **Yang dibayar**
 

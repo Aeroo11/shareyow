@@ -121,6 +121,31 @@ export async function loadAllGroups(db: SQLiteDatabase): Promise<GroupState[]> {
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 
+/** Sampai nomor urut berapa grup ini sudah ditarik dari server. */
+export async function getCursor(db: SQLiteDatabase, groupId: string): Promise<number> {
+  const row = await db.getFirstAsync<{ last_seq: number }>(
+    'SELECT last_seq FROM sync_cursor WHERE group_id = ?',
+    groupId,
+  );
+  return row?.last_seq ?? 0;
+}
+
+export async function setCursor(
+  db: SQLiteDatabase,
+  groupId: string,
+  lastSeq: number,
+): Promise<void> {
+  // `MAX` menjaga kursor tidak pernah mundur. Dua penyinkronan yang berjalan
+  // bersamaan bisa selesai tidak berurutan, dan kursor yang mundur berarti
+  // menarik ulang operasi lama — tidak merusak, tapi membuang kuota dan waktu.
+  await db.runAsync(
+    `INSERT INTO sync_cursor (group_id, last_seq) VALUES (?, ?)
+     ON CONFLICT (group_id) DO UPDATE SET last_seq = MAX(last_seq, excluded.last_seq)`,
+    groupId,
+    lastSeq,
+  );
+}
+
 export async function getIdentity(db: SQLiteDatabase, groupId: string): Promise<string | null> {
   const row = await db.getFirstAsync<{ member_id: string }>(
     'SELECT member_id FROM group_identity WHERE group_id = ?',

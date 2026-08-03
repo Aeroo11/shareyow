@@ -72,6 +72,11 @@ export default function RootLayout() {
                 }}
               >
                 <Stack.Screen name="index" options={{ title: 'share.yow' }} />
+                <Stack.Screen name="account" options={{ title: 'Akun' }} />
+                <Stack.Screen
+                  name="join"
+                  options={{ title: 'Gabung grup', presentation: 'modal' }}
+                />
                 <Stack.Screen
                   name="group/new"
                   options={{ title: 'Grup baru', presentation: 'modal' }}

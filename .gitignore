@@ -31,6 +31,10 @@ yarn-error.*
 *.pem
 
 # local env files
+# .env sengaja tidak ikut ter-commit walau anon key aman terlihat publik:
+# begitu satu berkas env terbiasa masuk repo, cepat atau lambat ada rahasia
+# yang ikut. .env.example yang menjadi dokumentasinya.
+.env
 .env*.local
 
 # typescript

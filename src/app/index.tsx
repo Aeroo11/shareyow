@@ -13,13 +13,15 @@ import {
   Touchable,
 } from '../ui/components';
 import { formatRupiah } from '../core/money';
-import { colors, spacing, type } from '../ui/theme';
+import { colors, radius, spacing, type } from '../ui/theme';
 import { useGroups, type GroupSummary } from '../hooks/useGroups';
+import { useSync } from '../hooks/useSync';
 
 export default function GroupListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data: groups, loading, error } = useGroups();
+  const sync = useSync();
 
   if (loading) return <Loading />;
   if (error) {
@@ -42,20 +44,69 @@ export default function GroupListScreen() {
           keyExtractor={(g) => g.state.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 108 }]}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={list.length > 0 ? <Headline owes={owes} isOwed={isOwed} /> : null}
+          ListHeaderComponent={
+            <>
+              <SyncBar sync={sync} onOpenAccount={() => router.push('/account')} />
+              {list.length > 0 ? <Headline owes={owes} isOwed={isOwed} /> : null}
+            </>
+          }
           ListEmptyComponent={<Welcome />}
           renderItem={({ item, index }) => <GroupCard summary={item} index={index} />}
         />
       </Screen>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-        <Screen>
-          <Button label="Grup baru" onPress={() => router.push('/group/new')} />
+        <Screen style={styles.footerRow}>
+          <Button
+            label="Gabung"
+            variant="secondary"
+            style={styles.footerJoin}
+            onPress={() => router.push('/join')}
+          />
+          <Button
+            label="Grup baru"
+            style={styles.footerNew}
+            onPress={() => router.push('/group/new')}
+          />
         </Screen>
       </View>
     </View>
   );
 }
+
+/**
+ * Baris status sinkronisasi.
+ *
+ * Ia hanya muncul kalau ada yang perlu diketahui. Aplikasi ini berjalan penuh
+ * tanpa akun, jadi menampilkan "belum masuk" secara permanen akan terasa seperti
+ * teguran atas sesuatu yang bukan kesalahan.
+ */
+function SyncBar({ sync, onOpenAccount }: { sync: SyncStateView; onOpenAccount: () => void }) {
+  const label =
+    sync.running ? 'menyinkron…'
+    : sync.lastError ? 'gagal menyinkron'
+    : sync.pending > 0 ? `${sync.pending} belum terkirim`
+    : sync.canSync ? 'tersinkron'
+    : 'hanya di HP ini';
+
+  const tone =
+    sync.lastError ? colors.negative
+    : sync.pending > 0 ? colors.warningText
+    : sync.canSync ? colors.accent
+    : colors.textFaint;
+
+  return (
+    <Touchable onPress={onOpenAccount}>
+      <View style={styles.syncBar}>
+        <View style={[styles.syncDot, { backgroundColor: tone }]} />
+        <Text style={[styles.syncText, { color: tone }]}>{label}</Text>
+        <Text style={styles.syncAction}>{sync.canSync ? 'akun' : 'aktifkan'}</Text>
+      </View>
+    </Touchable>
+  );
+}
+
+type SyncStateView = ReturnType<typeof useSync>;
 
 /**
  * Sambutan pertama kali.
@@ -160,7 +211,17 @@ const styles = StyleSheet.create({
   padded: { padding: spacing.lg },
   list: { padding: spacing.lg, gap: spacing.md },
 
-  welcome: { paddingTop: spacing.xxl, gap: spacing.sm },
+  syncBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  syncDot: { width: 6, height: 6, borderRadius: 3 },
+  syncText: { ...type.caption, flex: 1 },
+  syncAction: { ...type.label, color: colors.textFaint, textTransform: 'lowercase' },
+
+  welcome: { paddingTop: spacing.xl, gap: spacing.sm },
   wordmark: { ...type.display, fontSize: 40, lineHeight: 44, color: colors.accent },
   tagline: { ...type.heading, color: colors.textMuted },
   points: { gap: spacing.lg, marginTop: spacing.xl },
@@ -198,4 +259,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
+  footerRow: { flexDirection: 'row', gap: spacing.md, flex: 0 },
+  footerJoin: { paddingHorizontal: spacing.lg, borderRadius: radius.md },
+  footerNew: { flex: 1, borderRadius: radius.md },
 });

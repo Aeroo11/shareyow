@@ -7,7 +7,9 @@ import { formatRupiah } from '../../../core/money';
 import { activeMembers } from '../../../core/ops';
 import { balancesOf } from '../../../core/selectors';
 import { addMember, renameMember } from '../../../db/actions';
+import { useAuth } from '../../../hooks/useAuth';
 import { useGroup } from '../../../hooks/useGroups';
+import { SupabaseTransport } from '../../../sync/transport';
 import {
   Button,
   Card,
@@ -156,6 +158,8 @@ export default function MembersScreen() {
             />
           </View>
 
+          <InviteSection groupId={state.id} groupName={state.name} />
+
           <View style={styles.noteBox}>
             <Text style={styles.noteText}>
               Menghapus anggota belum bisa dilakukan. Orang yang saldonya belum nol akan hilang
@@ -165,6 +169,70 @@ export default function MembersScreen() {
           </View>
         </ScrollView>
       </Screen>
+    </View>
+  );
+}
+
+/**
+ * Kode undangan — satu-satunya bagian layar ini yang membutuhkan akun.
+ *
+ * Sengaja diletakkan paling bawah dan tanpa nada mendesak: mengundang orang lain
+ * adalah pilihan, bukan langkah yang harus diselesaikan. Grup tetap berfungsi
+ * penuh kalau kamu satu-satunya yang memakainya.
+ */
+function InviteSection({ groupId, groupName }: { groupId: string; groupName: string }) {
+  const { session, configured } = useAuth();
+  const [invite, setInvite] = useState<{ code: string; expiresAt: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!configured) return null;
+
+  async function create() {
+    const transport = SupabaseTransport.create();
+    if (!transport) return;
+
+    setBusy(true);
+    setError(null);
+    try {
+      // Grup harus ada di server sebelum undangannya bisa dibuat — dan grup ini
+      // mungkin baru hidup di HP saja sampai detik ini.
+      await transport.ensureGroup({ groupId, name: groupName, myMemberId: session!.user.id });
+      setInvite(await transport.createInvite(groupId));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <View style={styles.section}>
+      <SectionTitle>undang lewat kode</SectionTitle>
+
+      {!session ? (
+        <Text style={styles.balance}>
+          Perlu masuk ke akun dulu untuk membuat kode undangan. Grup ini tetap berfungsi penuh
+          tanpa itu.
+        </Text>
+      ) : invite ? (
+        <Card style={{ gap: spacing.sm }}>
+          <Text style={styles.code}>{invite.code}</Text>
+          <Text style={styles.balance}>
+            Berlaku sampai {new Date(invite.expiresAt).toLocaleDateString('id-ID')}. Minta temanmu
+            memasukkannya lewat tombol Gabung di layar utama.
+          </Text>
+        </Card>
+      ) : (
+        <Button
+          label={busy ? 'Membuat…' : 'Buat kode undangan'}
+          variant="secondary"
+          onPress={() => void create()}
+          disabled={busy}
+        />
+      )}
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
 }
@@ -191,4 +259,7 @@ const styles = StyleSheet.create({
 
   noteBox: { backgroundColor: colors.warningSoft, borderRadius: radius.sm, padding: spacing.lg },
   noteText: { ...type.caption, color: colors.warningText },
+
+  code: { ...type.display, fontSize: 36, letterSpacing: 8, color: colors.accent, textAlign: 'center' },
+  error: { ...type.body, color: colors.negative },
 });
