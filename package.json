@@ -1,22 +1,60 @@
 {
-  "name": "app",
-  "version": "1.0.0",
-  "main": "index.ts",
+  "name": "patungan",
+  "version": "0.1.0",
+  "main": "expo-router/entry",
   "dependencies": {
     "expo": "~57.0.9",
+    "expo-constants": "~57.0.8",
+    "expo-crypto": "~57.0.1",
+    "expo-linking": "~57.0.4",
+    "expo-router": "~57.0.9",
+    "expo-sqlite": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-native": "0.86.2"
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
+    "babel-jest": "^30.4.1",
+    "babel-preset-expo": "~57.0.5",
+    "jest": "^30.4.2",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "<rootDir>/src/**/__tests__/**/*.test.ts"
+    ],
+    "transform": {
+      "^.+\\.[jt]sx?$": [
+        "babel-jest",
+        {
+          "presets": [
+            [
+              "babel-preset-expo",
+              {
+                "jsxRuntime": "automatic"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
   },
   "private": true
 }

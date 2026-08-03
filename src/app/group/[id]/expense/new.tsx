@@ -1,0 +1,228 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useMemo, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+
+import { formatRupiah, parseRupiah } from '../../../../core/money';
+import { activeMembers } from '../../../../core/ops';
+import { computeShares } from '../../../../core/split';
+import { addExpense } from '../../../../db/actions';
+import { useGroup } from '../../../../hooks/useGroups';
+import { Button, Chip, ErrorNotice, Field, Loading, SectionTitle } from '../../../../ui/components';
+import { colors, radius, spacing, type } from '../../../../ui/theme';
+
+export default function NewExpenseScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const db = useSQLiteContext();
+  const router = useRouter();
+  const { data, loading, error } = useGroup(id);
+
+  const [description, setDescription] = useState('');
+  const [amountText, setAmountText] = useState('');
+  const [payerId, setPayerId] = useState<string | null>(null);
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const members = data ? activeMembers(data.state) : [];
+  const amount = parseRupiah(amountText);
+
+  // Pembayar dan peserta punya nilai awal yang masuk akal: kamu yang membayar,
+  // semua orang ikut menanggung. Itu kasus yang paling sering terjadi, jadi
+  // seringkali cukup mengetik keterangan dan nominal lalu simpan.
+  const effectivePayerId = payerId ?? data?.myMemberId ?? members[0]?.id ?? null;
+  const participants = members.map((m) => m.id).filter((mid) => !excluded.has(mid));
+
+  const preview = useMemo(() => {
+    if (amount === null || amount < 0 || participants.length === 0) return null;
+    try {
+      return computeShares(amount, participants, { kind: 'equal' }, 'pratinjau');
+    } catch {
+      return null;
+    }
+  }, [amount, participants.join(',')]);
+
+  if (loading) return <Loading />;
+  if (error) {
+    return (
+      <View style={styles.padded}>
+        <ErrorNotice error={error} />
+      </View>
+    );
+  }
+  if (!data) return null;
+
+  const amountError =
+    amountText.trim().length > 0 && amount === null ? 'Nominal tidak terbaca' : null;
+  const canSave =
+    description.trim().length > 0 &&
+    amount !== null &&
+    amount > 0 &&
+    participants.length > 0 &&
+    effectivePayerId !== null &&
+    !saving;
+
+  async function save() {
+    if (!canSave || amount === null || !effectivePayerId) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await addExpense(db, id, effectivePayerId, {
+        description: description.trim(),
+        total: amount,
+        payerId: effectivePayerId,
+        participants,
+        mode: { kind: 'equal' },
+        occurredAt: Date.now(),
+      });
+      router.back();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : String(e));
+      setSaving(false);
+    }
+  }
+
+  function toggleParticipant(memberId: string) {
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      if (next.has(memberId)) next.delete(memberId);
+      else next.add(memberId);
+      return next;
+    });
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Field
+          label="Untuk apa"
+          placeholder="Galon + gas"
+          value={description}
+          onChangeText={setDescription}
+          autoFocus
+        />
+
+        <Field
+          label="Nominal"
+          placeholder="45.000"
+          value={amountText}
+          onChangeText={setAmountText}
+          keyboardType="numeric"
+          error={amountError}
+          hint={amount !== null && !amountError ? formatRupiah(amount) : 'Boleh ditulis "45rb"'}
+        />
+
+        <View style={styles.section}>
+          <SectionTitle>Siapa yang menalangi</SectionTitle>
+          <View style={styles.chipRow}>
+            {members.map((member) => (
+              <Chip
+                key={member.id}
+                label={member.displayName}
+                selected={member.id === effectivePayerId}
+                onPress={() => setPayerId(member.id)}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <SectionTitle>Dibagi ke</SectionTitle>
+          <View style={styles.participantList}>
+            {members.map((member) => {
+              const included = !excluded.has(member.id);
+              const share = preview?.find((s) => s.memberId === member.id);
+
+              return (
+                <Pressable
+                  key={member.id}
+                  onPress={() => toggleParticipant(member.id)}
+                  style={({ pressed }) => [styles.participantRow, pressed && { opacity: 0.6 }]}
+                >
+                  <View style={[styles.checkbox, included && styles.checkboxOn]}>
+                    {included ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                  </View>
+                  <Text style={[styles.participantName, !included && styles.participantOff]}>
+                    {member.displayName}
+                  </Text>
+                  <Text style={[styles.participantShare, !included && styles.participantOff]}>
+                    {included && share ? formatRupiah(share.amount) : '—'}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {preview && !isEvenlyDivisible(preview) ? (
+            <Text style={styles.roundingNote}>
+              Tidak habis dibagi rata. Sisa rupiahnya dibagikan supaya jumlahnya tetap persis{' '}
+              {formatRupiah(amount ?? 0)} — tidak ada rupiah yang hilang.
+            </Text>
+          ) : null}
+
+          {participants.length === 0 ? (
+            <Text style={styles.warning}>Pilih minimal satu orang.</Text>
+          ) : null}
+        </View>
+
+        {saveError ? <Text style={styles.warning}>{saveError}</Text> : null}
+
+        <Button label={saving ? 'Menyimpan…' : 'Simpan'} onPress={save} disabled={!canSave} />
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+function isEvenlyDivisible(shares: Array<{ amount: number }>): boolean {
+  return shares.every((s) => s.amount === shares[0]!.amount);
+}
+
+const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: colors.bg },
+  padded: { padding: spacing.lg },
+  content: { padding: spacing.lg, gap: spacing.xl },
+  section: { gap: spacing.sm },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+
+  participantList: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+  },
+  participantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.sm,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  checkboxMark: { color: colors.surface, fontSize: 13, fontWeight: '700' },
+  participantName: { ...type.body, color: colors.text, flex: 1 },
+  participantShare: { ...type.body, color: colors.textMuted, fontVariant: ['tabular-nums'] },
+  participantOff: { color: colors.textFaint },
+
+  roundingNote: { ...type.caption, color: colors.textMuted, lineHeight: 17 },
+  warning: { ...type.body, color: colors.negative },
+});
