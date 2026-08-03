@@ -31,6 +31,13 @@ export interface ExpenseFields {
   mode: SplitMode;
   /** Kapan pengeluarannya terjadi (epoch ms) — bisa berbeda dari kapan dicatat. */
   occurredAt: number;
+  /**
+   * Id kategori. Opsional karena log bersifat append-only: operasi yang ditulis
+   * sebelum kategori ada tidak punya field ini, dan tidak akan pernah punya.
+   * Menambahkan field opsional adalah satu-satunya perubahan skema yang aman
+   * pada log semacam ini.
+   */
+  category?: string;
 }
 
 type Payloads = {

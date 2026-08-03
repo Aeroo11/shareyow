@@ -18,6 +18,7 @@ import {
   Screen,
   SectionTitle,
 } from '../../../../ui/components';
+import { CategoryPicker, DateStepper } from '../../../../ui/ExpenseMeta';
 import { SplitEditor } from '../../../../ui/SplitEditor';
 import { confirm } from '../../../../ui/confirm';
 import { colors, spacing, type } from '../../../../ui/theme';
@@ -34,6 +35,8 @@ export default function EditExpenseScreen() {
   const [description, setDescription] = useState<string | null>(null);
   const [amountText, setAmountText] = useState<string | null>(null);
   const [payerId, setPayerId] = useState<string | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
+  const [occurredAt, setOccurredAt] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -75,6 +78,8 @@ export default function EditExpenseScreen() {
   }
 
   const effectivePayerId = payerId ?? expense.payerId;
+  const shownCategory = category ?? expense.category ?? 'lainnya';
+  const shownOccurredAt = occurredAt ?? expense.occurredAt;
   const authorId = data.myMemberId ?? effectivePayerId;
 
   const amountError =
@@ -96,6 +101,8 @@ export default function EditExpenseScreen() {
         payerId: effectivePayerId,
         participants: split.participants,
         mode: split.mode,
+        occurredAt: shownOccurredAt,
+        category: shownCategory,
       });
       router.back();
     } catch (e) {
@@ -142,6 +149,8 @@ export default function EditExpenseScreen() {
             style={styles.amountInput}
           />
 
+          <CategoryPicker value={shownCategory} onChange={setCategory} />
+
           <View style={styles.section}>
             <SectionTitle>siapa yang menalangi</SectionTitle>
             <View style={styles.chipRow}>
@@ -157,6 +166,8 @@ export default function EditExpenseScreen() {
           </View>
 
           <SplitEditor members={members} split={split} />
+
+          <DateStepper value={shownOccurredAt} onChange={setOccurredAt} />
 
           {saveError ? <Text style={styles.warning}>{saveError}</Text> : null}
 

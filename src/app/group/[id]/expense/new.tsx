@@ -18,6 +18,7 @@ import {
   Screen,
   SectionTitle,
 } from '../../../../ui/components';
+import { CategoryPicker, DateStepper } from '../../../../ui/ExpenseMeta';
 import { SplitEditor } from '../../../../ui/SplitEditor';
 import { colors, spacing, type } from '../../../../ui/theme';
 
@@ -30,6 +31,8 @@ export default function NewExpenseScreen() {
   const [description, setDescription] = useState('');
   const [amountText, setAmountText] = useState('');
   const [payerId, setPayerId] = useState<string | null>(null);
+  const [category, setCategory] = useState('makan');
+  const [occurredAt, setOccurredAt] = useState(() => Date.now());
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -86,7 +89,8 @@ export default function NewExpenseScreen() {
         payerId: effectivePayerId,
         participants: split.participants,
         mode: split.mode,
-        occurredAt: Date.now(),
+        occurredAt,
+        category,
       });
       router.back();
     } catch (e) {
@@ -129,6 +133,8 @@ export default function NewExpenseScreen() {
             style={styles.amountInput}
           />
 
+          <CategoryPicker value={category} onChange={setCategory} />
+
           <View style={styles.section}>
             <SectionTitle>siapa yang menalangi</SectionTitle>
             <View style={styles.chipRow}>
@@ -144,6 +150,8 @@ export default function NewExpenseScreen() {
           </View>
 
           <SplitEditor members={members} split={split} />
+
+          <DateStepper value={occurredAt} onChange={setOccurredAt} />
 
           {saveError ? <Text style={styles.warning}>{saveError}</Text> : null}
 

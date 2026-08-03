@@ -90,6 +90,15 @@ export async function countPendingOps(db: SQLiteDatabase): Promise<number> {
   return row?.n ?? 0;
 }
 
+/**
+ * Seluruh operasi sebuah grup, mentah dan belum dilipat. Dipakai layar riwayat
+ * aktivitas — yang memang tidak butuh keadaan akhir, melainkan perjalanannya.
+ */
+export async function loadOps(db: SQLiteDatabase, groupId: string): Promise<Op[]> {
+  const rows = await db.getAllAsync<OpRow>('SELECT * FROM ops WHERE group_id = ?', groupId);
+  return rows.map(rowToOp);
+}
+
 export async function loadGroup(db: SQLiteDatabase, groupId: string): Promise<GroupState | null> {
   const rows = await db.getAllAsync<OpRow>('SELECT * FROM ops WHERE group_id = ?', groupId);
   if (rows.length === 0) return null;

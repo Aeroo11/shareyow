@@ -20,6 +20,7 @@ import {
   SectionTitle,
   Touchable,
 } from '../../../ui/components';
+import { CategoryIcon } from '../../../ui/ExpenseMeta';
 import { confirm } from '../../../ui/confirm';
 import { colors, radius, spacing, type } from '../../../ui/theme';
 
@@ -126,7 +127,18 @@ export default function GroupScreen() {
           </View>
 
           <View style={styles.section}>
-            <SectionTitle>pengeluaran</SectionTitle>
+            <SectionTitle
+              action={
+                <Text
+                  style={styles.action}
+                  onPress={() => router.push(`/group/${state.id}/activity`)}
+                >
+                  riwayat
+                </Text>
+              }
+            >
+              pengeluaran
+            </SectionTitle>
 
             {expenses.length === 0 ? (
               <Card>
@@ -184,6 +196,7 @@ export default function GroupScreen() {
 function ExpenseRow({ state, expense }: { state: GroupState; expense: Expense }) {
   return (
     <View style={styles.expenseRow}>
+      <CategoryIcon id={expense.category} />
       <View style={styles.expenseMain}>
         <Text style={styles.expenseDescription} numberOfLines={1}>
           {expense.description}
