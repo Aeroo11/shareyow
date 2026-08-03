@@ -170,6 +170,11 @@ npm run typecheck
 Dikembangkan di Windows dengan iPhone lewat **Expo Go** — tanpa Mac, tanpa akun
 Apple Developer. Untuk teman-teman yang memakai Android, APK dibuat lewat EAS Build.
 
+Dipatok ke **Expo SDK 54**, bukan yang terbaru. Alasannya praktis: Expo Go di
+iPhone pengembangnya hanya mendukung sampai SDK 54, dan aplikasi yang tidak bisa
+dijalankan di HP sendiri tidak akan pernah dipakai sehari-hari — yang justru
+menjadi tolok ukur proyek ini.
+
 ---
 
 ## Peta jalan
