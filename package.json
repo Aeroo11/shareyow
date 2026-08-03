@@ -37,7 +37,8 @@
     "web": "expo start --web",
     "test": "jest",
     "test:watch": "jest --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:backend": "node scripts/check-backend.mjs"
   },
   "jest": {
     "testEnvironment": "node",
