@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test -- --ci
+
+      # Membangun untuk KEDUA platform, bukan salah satu.
+      #
+      # Kerusakan yang paling membingungkan di proyek ini adalah yang hanya muncul
+      # di satu platform — Alert yang tidak ada di web, SQLite yang berjalan sebagai
+      # WebAssembly di browser tapi native di HP. Typecheck tidak menangkap satu pun
+      # dari keduanya; hanya membangun sungguhan yang bisa.
+      - name: Bundle iOS
+        run: npx expo export --platform ios --output-dir /tmp/export-ios
+
+      - name: Bundle web
+        run: npx expo export --platform web --output-dir /tmp/export-web

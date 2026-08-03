@@ -164,9 +164,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   transferNames: { flexShrink: 1, gap: 2 },
-  transferFrom: { ...type.body, color: colors.text, fontWeight: '600' },
+  transferFrom: { ...type.bodyStrong, color: colors.text },
   arrow: { ...type.caption, color: colors.textFaint },
-  transferTo: { ...type.body, color: colors.text, fontWeight: '600' },
+  transferTo: { ...type.bodyStrong, color: colors.text },
 
   historyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   historyText: { ...type.body, color: colors.textMuted, flexShrink: 1 },

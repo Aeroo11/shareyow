@@ -136,7 +136,7 @@ export function Chip({
       onPress={onPress}
       style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && { opacity: 0.7 }]}
     >
-      <Text style={[styles.chipLabel, selected && { color: colors.surface }]} numberOfLines={1}>
+      <Text style={[styles.chipLabel, selected && { color: colors.textOnAccent }]} numberOfLines={1}>
         {label}
       </Text>
     </Pressable>
@@ -201,30 +201,31 @@ const styles = StyleSheet.create({
   },
   buttonPrimary: { backgroundColor: colors.accent },
   buttonSecondary: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   buttonDanger: { backgroundColor: colors.negativeSoft },
-  buttonLabel: { ...type.heading, color: colors.surface },
+  buttonLabel: { ...type.heading, color: colors.textOnAccent },
   fieldLabel: { ...type.label, color: colors.textMuted },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    ...type.body,
     fontSize: 16,
     color: colors.text,
   },
   hintText: { ...type.caption, color: colors.textFaint },
   errorText: { ...type.caption, color: colors.negative },
   chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 10,
     borderRadius: radius.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     maxWidth: 180,

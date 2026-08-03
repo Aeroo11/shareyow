@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   nameWrap: { paddingVertical: spacing.xs, gap: 2 },
   editWrap: { paddingVertical: spacing.xs },
-  name: { ...type.body, color: colors.text, fontWeight: '600' },
+  name: { ...type.bodyStrong, color: colors.text },
   balance: { ...type.caption, color: colors.textMuted },
   hint: { ...type.caption, color: colors.textFaint },
 

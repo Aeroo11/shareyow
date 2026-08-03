@@ -1,14 +1,19 @@
-# Patungan
+# share.yow
 
 Aplikasi mobile untuk mencatat pengeluaran bersama anak kos dan kelompok tugas,
 lalu menghitung siapa harus transfer ke siapa — **tanpa perlu sinyal**, dan tanpa
 mengharuskan orang lain memasang aplikasinya.
 
-React Native (Expo) · TypeScript · SQLite · Supabase _(sinkronisasi, Minggu 3)_
+React Native (Expo) · TypeScript · SQLite · Supabase _(sinkronisasi, Sprint 3)_
 
-> **Status: Minggu 1 selesai.** Aplikasi sudah bisa dipakai sehari-hari, sepenuhnya
-> offline: buat grup, catat pengeluaran, lihat saldo, dan selesaikan utang.
+> **Status: Sprint 0 selesai.** Inti perhitungan dan penyimpanan lokal sudah jalan
+> dan bisa dipakai sehari-hari tanpa internet. Sekarang sedang dibangun menjadi
+> produk utuh dalam enam sprint — lihat [peta jalan](#peta-jalan).
 > README ini hanya menjelaskan yang sudah benar-benar ada di dalam kode.
+
+**Cara kerja:** sprint 1 minggu · [ADR](docs/adr/) untuk keputusan arsitektur ·
+[retro](docs/retro/) tiap akhir sprint · CI menjalankan typecheck, test, dan bundel
+iOS **dan** web di setiap PR.
 
 ---
 
@@ -51,7 +56,7 @@ flowchart LR
 
   U -->|"selalu INSERT,<br/>tidak pernah UPDATE"| O
   O --> F --> S --> B
-  O -.->|"seq IS NULL<br/>= antrean kirim"| X["Supabase<br/><i>Minggu 3</i>"]
+  O -.->|"seq IS NULL<br/>= antrean kirim"| X["Supabase<br/><i>Sprint 3</i>"]
   X -.->|"tarik seq > cursor"| O
 ```
 
@@ -148,8 +153,11 @@ src/
     live.ts         revisi & kueri reaktif
     __tests__/      diuji terhadap SQLite sungguhan lewat `node:sqlite`
   hooks/
-  ui/             tema + komponen
+  ui/             token desain, komponen, error boundary
   app/            layar (expo-router)
+docs/
+  adr/            catatan keputusan arsitektur — termasuk yang merugikan
+  retro/          retrospektif tiap akhir sprint, tiga kalimat
 ```
 
 Batas yang dijaga ketat: **`src/core/` tidak mengimpor apa pun dari React, React
@@ -200,10 +208,16 @@ menjadi tolok ukur proyek ini.
 
 ## Peta jalan
 
-- [x] **Minggu 1** — inti perhitungan + penyimpanan lokal + layar utama, sepenuhnya offline
-- [ ] **Minggu 2** — mode pembagian nominal/persen/porsi, ubah pengeluaran, riwayat
-- [ ] **Minggu 3** — Supabase: skema, RLS, auth, mesin sinkronisasi, kode undangan
-- [ ] **Minggu 4** — poles, APK, dipakai beneran di kos
+- [x] **Sprint 0** — inti perhitungan + penyimpanan lokal offline, ganti nama, sistem desain, CI, ADR
+- [ ] **Sprint 1** — rombak seluruh tampilan ke bahasa visual baru, gerak & haptik
+- [ ] **Sprint 2** — mode pembagian nominal/persen/porsi, ubah pengeluaran, kategori, riwayat aktivitas
+- [ ] **Sprint 3** — Supabase: skema, RLS, auth, mesin sinkronisasi, undangan
+- [ ] **Sprint 4** — salin rincian transfer, ringkasan bulanan, pengeluaran berulang, ekspor CSV
+- [ ] **Sprint 5** — tata letak desktop + mode demo, deploy ke web
+- [ ] **Sprint 6** — ikon, aksesibilitas, E2E, APK, rilis v1.0.0
+
+Tolok ukur selesai bukan jumlah fitur, melainkan pemakaian: **50 pengeluaran asli
+dan 3 pengguna aktif** selama dua minggu sebelum v1.0.0.
 
 ## Yang sengaja tidak dikerjakan
 

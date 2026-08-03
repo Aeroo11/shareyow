@@ -10,7 +10,7 @@ import { addExpense } from '../../../../db/actions';
 import { newId } from '../../../../db/ids';
 import { useGroup } from '../../../../hooks/useGroups';
 import { Button, Chip, ErrorNotice, Field, Loading, SectionTitle } from '../../../../ui/components';
-import { colors, radius, spacing, type } from '../../../../ui/theme';
+import { colors, fonts, radius, spacing, type } from '../../../../ui/theme';
 
 export default function NewExpenseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  checkboxMark: { color: colors.surface, fontSize: 13, fontWeight: '700' },
+  checkboxMark: { ...type.caption, color: colors.textOnAccent, fontFamily: fonts.bold },
   participantName: { ...type.body, color: colors.text, flex: 1 },
   participantShare: { ...type.body, color: colors.textMuted, fontVariant: ['tabular-nums'] },
   participantOff: { color: colors.textFaint },

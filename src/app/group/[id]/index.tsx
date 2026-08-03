@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   expenseMain: { flexShrink: 1, gap: 2 },
-  expenseDescription: { ...type.body, color: colors.text, fontWeight: '600' },
+  expenseDescription: { ...type.bodyStrong, color: colors.text },
   expenseMeta: { ...type.caption, color: colors.textMuted },
 
   footer: {

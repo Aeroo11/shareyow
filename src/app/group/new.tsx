@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   label: { ...type.label, color: colors.textMuted },
   hint: { ...type.caption, color: colors.textFaint, lineHeight: 17 },
   addRow: { paddingVertical: spacing.sm },
-  addRowText: { ...type.body, color: colors.accent, fontWeight: '600' },
+  addRowText: { ...type.bodyStrong, color: colors.accent },
   summary: {
     backgroundColor: colors.accentSoft,
     borderRadius: radius.md,

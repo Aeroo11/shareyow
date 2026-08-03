@@ -1,20 +1,21 @@
 {
   "expo": {
-    "name": "Patungan",
-    "slug": "patungan",
-    "scheme": "patungan",
-    "version": "0.1.0",
+    "name": "share.yow",
+    "slug": "shareyow",
+    "scheme": "shareyow",
+    "version": "0.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0C0E",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.efanramdhani.patungan"
+      "bundleIdentifier": "app.shareyow"
     },
     "android": {
-      "package": "com.efanramdhani.patungan",
+      "package": "app.shareyow",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B0C0E",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -28,7 +29,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
