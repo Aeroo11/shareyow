@@ -15,3 +15,4 @@ membacanya enam bulan kemudian — termasuk penulisnya sendiri.
 | [0002](0002-sql-mentah-bukan-orm.md) | SQL mentah, bukan ORM | Berlaku |
 | [0003](0003-patokan-expo-sdk-54.md) | Dipatok ke Expo SDK 54 | Berlaku |
 | [0004](0004-nama-berkas-basis-data-tetap.md) | Nama berkas basis data tidak ikut berganti nama | Berlaku |
+| [0005](0005-nomor-urut-per-grup-bukan-bigserial.md) | Nomor urut per grup lewat penghitung terkunci, bukan `bigserial` | Berlaku |
