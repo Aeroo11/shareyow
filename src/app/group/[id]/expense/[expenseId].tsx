@@ -5,13 +5,13 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { formatRupiah, parseRupiah } from '../../../../core/money';
 import { activeMembers } from '../../../../core/ops';
-import { addExpense } from '../../../../db/actions';
-import { newId } from '../../../../db/ids';
+import { deleteExpense, editExpense } from '../../../../db/actions';
 import { useGroup } from '../../../../hooks/useGroups';
-import { useSplitDraft } from '../../../../hooks/useSplitDraft';
+import { draftFrom, useSplitDraft } from '../../../../hooks/useSplitDraft';
 import {
   Button,
   Chip,
+  EmptyState,
   ErrorNotice,
   Field,
   Loading,
@@ -19,31 +19,40 @@ import {
   SectionTitle,
 } from '../../../../ui/components';
 import { SplitEditor } from '../../../../ui/SplitEditor';
+import { confirm } from '../../../../ui/confirm';
 import { colors, spacing, type } from '../../../../ui/theme';
 
-export default function NewExpenseScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+export default function EditExpenseScreen() {
+  const { id, expenseId } = useLocalSearchParams<{ id: string; expenseId: string }>();
   const db = useSQLiteContext();
   const router = useRouter();
   const { data, loading, error } = useGroup(id);
 
-  const [description, setDescription] = useState('');
-  const [amountText, setAmountText] = useState('');
+  const expense = data?.state.expenses.get(expenseId);
+  const members = data ? activeMembers(data.state) : [];
+
+  const [description, setDescription] = useState<string | null>(null);
+  const [amountText, setAmountText] = useState<string | null>(null);
   const [payerId, setPayerId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Dibuat sekali saat form dibuka, lalu dipakai untuk dua hal yang harus cocok:
-  // seed pratinjau pembagian, dan id pengeluaran yang disimpan. Kalau keduanya
-  // berbeda, angka yang dilihat pengguna bisa berbeda dari yang tercatat.
-  const [expenseId] = useState(newId);
+  // Nilai yang ditampilkan: yang sedang diketik kalau ada, kalau belum yang tersimpan.
+  // Pola ini menghindari useEffect penyalin nilai awal, yang selalu berakhir dengan
+  // pertanyaan "kenapa ketikanku tertimpa sendiri".
+  const shownDescription = description ?? expense?.description ?? '';
+  const shownAmountText = amountText ?? (expense ? String(expense.total) : '');
+  const amount = parseRupiah(shownAmountText);
 
-  const members = data ? activeMembers(data.state) : [];
-  const amount = parseRupiah(amountText);
+  // Seed WAJIB id pengeluaran yang sedang diubah, bukan id baru — kalau tidak,
+  // sisa rupiah bisa berpindah orang hanya karena pengeluaran itu dibuka.
   const split = useSplitDraft(
     members.map((m) => m.id),
     amount,
     expenseId,
+    expense
+      ? draftFrom(members.map((m) => m.id), expense.participants, expense.mode)
+      : undefined,
   );
 
   if (loading) return <Loading />;
@@ -54,39 +63,39 @@ export default function NewExpenseScreen() {
       </Screen>
     );
   }
-  if (!data) return null;
+  if (!data || !expense) {
+    return (
+      <Screen style={styles.padded}>
+        <EmptyState
+          title="pengeluaran tidak ditemukan"
+          body="Mungkin sudah dihapus dari perangkat lain."
+        />
+      </Screen>
+    );
+  }
 
-  // Pembayar punya nilai awal yang masuk akal: kamu. Itu kasus yang paling sering
-  // terjadi, jadi seringkali cukup mengetik keterangan dan nominal lalu simpan.
-  const effectivePayerId = payerId ?? data.myMemberId ?? members[0]?.id ?? null;
-
-  // authorId = siapa yang MENCATAT, bukan siapa yang membayar. Keduanya sering orang
-  // yang sama, tapi tidak selalu — dan begitu sinkronisasi masuk, "siapa yang menulis
-  // operasi ini" jadi pertanyaan yang punya jawaban penting.
+  const effectivePayerId = payerId ?? expense.payerId;
   const authorId = data.myMemberId ?? effectivePayerId;
 
   const amountError =
-    amountText.trim().length > 0 && amount === null ? 'Nominal tidak terbaca' : null;
+    shownAmountText.trim().length > 0 && amount === null ? 'Nominal tidak terbaca' : null;
   const canSave =
-    description.trim().length > 0 &&
-    amount !== null &&
-    amount > 0 &&
-    split.mode !== null &&
-    effectivePayerId !== null &&
-    !saving;
+    shownDescription.trim().length > 0 && amount !== null && amount > 0 && split.mode !== null && !saving;
 
   async function save() {
-    if (!canSave || amount === null || !effectivePayerId || !split.mode) return;
+    if (!canSave || amount === null || !split.mode) return;
     setSaving(true);
     setSaveError(null);
     try {
-      await addExpense(db, id, authorId ?? effectivePayerId, expenseId, {
-        description: description.trim(),
+      // Seluruh field dikirim sebagai satu operasi ubah. Field yang tidak berubah
+      // ikut terkirim dengan nilai lamanya — itu tidak apa-apa, karena penggabungan
+      // last-op-wins bekerja per field dan nilai lama sama dengan nilai sekarang.
+      await editExpense(db, id, authorId, expenseId, {
+        description: shownDescription.trim(),
         total: amount,
         payerId: effectivePayerId,
         participants: split.participants,
         mode: split.mode,
-        occurredAt: Date.now(),
       });
       router.back();
     } catch (e) {
@@ -95,14 +104,21 @@ export default function NewExpenseScreen() {
     }
   }
 
+  async function remove() {
+    const yes = await confirm({
+      title: 'Hapus pengeluaran?',
+      message: `"${expense!.description}" akan dihapus dari perhitungan.`,
+      confirmLabel: 'Hapus',
+      destructive: true,
+    });
+    if (!yes) return;
+    await deleteExpense(db, id, authorId, expenseId);
+    router.back();
+  }
+
   return (
     <View style={styles.root}>
       <Screen>
-        {/* automaticallyAdjustKeyboardInsets menyisipkan ruang untuk keyboard dari
-            sisi sistem, jadi tidak perlu menebak tinggi header seperti
-            KeyboardAvoidingView — tebakan yang justru meleset pada layar bermodal.
-            keyboardDismissMode="on-drag" penting karena papan angka iOS tidak punya
-            tombol untuk menutup dirinya sendiri. */}
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
@@ -112,16 +128,13 @@ export default function NewExpenseScreen() {
         >
           <Field
             label="untuk apa"
-            placeholder="Galon + gas"
-            value={description}
+            value={shownDescription}
             onChangeText={setDescription}
-            autoFocus
           />
 
           <Field
             label="nominal"
-            placeholder="45.000"
-            value={amountText}
+            value={shownAmountText}
             onChangeText={setAmountText}
             keyboardType="numeric"
             error={amountError}
@@ -148,11 +161,12 @@ export default function NewExpenseScreen() {
           {saveError ? <Text style={styles.warning}>{saveError}</Text> : null}
 
           <Button
-            label={saving ? 'Menyimpan…' : 'Simpan'}
+            label={saving ? 'Menyimpan…' : 'Simpan perubahan'}
             onPress={save}
             disabled={!canSave}
             haptic="success"
           />
+          <Button label="Hapus pengeluaran" variant="danger" onPress={() => void remove()} />
         </ScrollView>
       </Screen>
     </View>
@@ -165,9 +179,6 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   section: { gap: spacing.md },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-
-  /** Nominal adalah isian terpenting di layar ini, jadi hurufnya paling besar. */
   amountInput: { ...type.title, fontSize: 26, paddingVertical: spacing.lg },
-
   warning: { ...type.body, color: colors.negative },
 });

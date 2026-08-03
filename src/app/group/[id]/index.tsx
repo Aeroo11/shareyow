@@ -141,7 +141,11 @@ export default function GroupScreen() {
                 {expenses.map((expense, index) => (
                   <View key={expense.id}>
                     {index > 0 ? <Divider /> : null}
-                    <Touchable index={index} onLongPress={() => void confirmDelete(expense)}>
+                    <Touchable
+                      index={index}
+                      onPress={() => router.push(`/group/${state.id}/expense/${expense.id}`)}
+                      onLongPress={() => void confirmDelete(expense)}
+                    >
                       <ExpenseRow state={state} expense={expense} />
                     </Touchable>
                   </View>
@@ -150,7 +154,9 @@ export default function GroupScreen() {
             )}
 
             {expenses.length > 0 ? (
-              <Text style={styles.listHint}>Tekan lama sebuah catatan untuk menghapusnya.</Text>
+              <Text style={styles.listHint}>
+                Ketuk untuk mengubah, tekan lama untuk menghapus.
+              </Text>
             ) : null}
           </View>
         </ScrollView>

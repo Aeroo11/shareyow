@@ -86,6 +86,10 @@ export default function RootLayout() {
                   name="group/[id]/expense/new"
                   options={{ title: 'Pengeluaran baru', presentation: 'modal' }}
                 />
+                <Stack.Screen
+                  name="group/[id]/expense/[expenseId]"
+                  options={{ title: 'Ubah pengeluaran', presentation: 'modal' }}
+                />
               </Stack>
             </SQLiteProvider>
           </Suspense>
