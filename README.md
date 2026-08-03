@@ -140,12 +140,13 @@ src/
     settle.ts       greedy min-cash-flow
     ops.ts          tipe operasi + fold
     selectors.ts    turunan yang dipakai layar
-    __tests__/      65 test, termasuk uji properti ber-seed
+    __tests__/      uji properti ber-seed untuk invarian perhitungan
   db/             satu-satunya lapisan yang menyentuh SQLite
     migrations.ts   skema (PRAGMA user_version)
     repository.ts   append & fold; tidak ada UPDATE/DELETE pada log
     actions.ts      aksi pengguna → operasi
     live.ts         revisi & kueri reaktif
+    __tests__/      diuji terhadap SQLite sungguhan lewat `node:sqlite`
   hooks/
   ui/             tema + komponen
   app/            layar (expo-router)
@@ -162,7 +163,7 @@ dalam milidetik tanpa perangkat, emulator, atau basis data.
 ```bash
 npm install
 npm start          # lalu pindai QR dengan Expo Go
-npm test           # 65 test
+npm test           # 75 test
 npm run typecheck
 ```
 
