@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { formatRupiah, parseRupiah } from '../../../../core/money';
 import { activeMembers } from '../../../../core/ops';
@@ -9,7 +9,16 @@ import { computeShares } from '../../../../core/split';
 import { addExpense } from '../../../../db/actions';
 import { newId } from '../../../../db/ids';
 import { useGroup } from '../../../../hooks/useGroups';
-import { Button, Chip, ErrorNotice, Field, Loading, SectionTitle } from '../../../../ui/components';
+import {
+  Button,
+  Chip,
+  ErrorNotice,
+  Field,
+  Loading,
+  Screen,
+  SectionTitle,
+  Touchable,
+} from '../../../../ui/components';
 import { colors, fonts, radius, spacing, type } from '../../../../ui/theme';
 
 export default function NewExpenseScreen() {
@@ -51,9 +60,9 @@ export default function NewExpenseScreen() {
   if (loading) return <Loading />;
   if (error) {
     return (
-      <View style={styles.padded}>
+      <Screen style={styles.padded}>
         <ErrorNotice error={error} />
-      </View>
+      </Screen>
     );
   }
   if (!data) return null;
@@ -103,93 +112,106 @@ export default function NewExpenseScreen() {
   }
 
   return (
-    // automaticallyAdjustKeyboardInsets menyisipkan ruang untuk keyboard dari sisi
-    // sistem, jadi tidak perlu menebak tinggi header seperti KeyboardAvoidingView
-    // — tebakan yang justru meleset pada layar bermodal seperti ini.
-    // keyboardDismissMode="on-drag" penting karena papan angka iOS tidak punya
-    // tombol untuk menutup dirinya sendiri.
-    <ScrollView
-      style={styles.flex}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
-      automaticallyAdjustKeyboardInsets
-    >
-        <Field
-          label="Untuk apa"
-          placeholder="Galon + gas"
-          value={description}
-          onChangeText={setDescription}
-          autoFocus
-        />
+    <View style={styles.root}>
+      <Screen>
+        {/* automaticallyAdjustKeyboardInsets menyisipkan ruang untuk keyboard dari
+            sisi sistem, jadi tidak perlu menebak tinggi header seperti
+            KeyboardAvoidingView — tebakan yang justru meleset pada layar bermodal.
+            keyboardDismissMode="on-drag" penting karena papan angka iOS tidak punya
+            tombol untuk menutup dirinya sendiri. */}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets
+          showsVerticalScrollIndicator={false}
+        >
+          <Field
+            label="untuk apa"
+            placeholder="Galon + gas"
+            value={description}
+            onChangeText={setDescription}
+            autoFocus
+          />
 
-        <Field
-          label="Nominal"
-          placeholder="45.000"
-          value={amountText}
-          onChangeText={setAmountText}
-          keyboardType="numeric"
-          error={amountError}
-          hint={amount !== null && !amountError ? formatRupiah(amount) : 'Boleh ditulis "45rb"'}
-        />
+          <Field
+            label="nominal"
+            placeholder="45.000"
+            value={amountText}
+            onChangeText={setAmountText}
+            keyboardType="numeric"
+            error={amountError}
+            hint={amount !== null && !amountError ? formatRupiah(amount) : 'Boleh ditulis "45rb"'}
+            style={styles.amountInput}
+          />
 
-        <View style={styles.section}>
-          <SectionTitle>Siapa yang menalangi</SectionTitle>
-          <View style={styles.chipRow}>
-            {members.map((member) => (
-              <Chip
-                key={member.id}
-                label={member.displayName}
-                selected={member.id === effectivePayerId}
-                onPress={() => setPayerId(member.id)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <SectionTitle>Dibagi ke</SectionTitle>
-          <View style={styles.participantList}>
-            {members.map((member) => {
-              const included = !excluded.has(member.id);
-              const share = preview?.find((s) => s.memberId === member.id);
-
-              return (
-                <Pressable
+          <View style={styles.section}>
+            <SectionTitle>siapa yang menalangi</SectionTitle>
+            <View style={styles.chipRow}>
+              {members.map((member) => (
+                <Chip
                   key={member.id}
-                  onPress={() => toggleParticipant(member.id)}
-                  style={({ pressed }) => [styles.participantRow, pressed && { opacity: 0.6 }]}
-                >
-                  <View style={[styles.checkbox, included && styles.checkboxOn]}>
-                    {included ? <Text style={styles.checkboxMark}>✓</Text> : null}
-                  </View>
-                  <Text style={[styles.participantName, !included && styles.participantOff]}>
-                    {member.displayName}
-                  </Text>
-                  <Text style={[styles.participantShare, !included && styles.participantOff]}>
-                    {included && share ? formatRupiah(share.amount) : '—'}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                  label={member.displayName}
+                  selected={member.id === effectivePayerId}
+                  onPress={() => setPayerId(member.id)}
+                />
+              ))}
+            </View>
           </View>
 
-          {preview && !isEvenlyDivisible(preview) ? (
-            <Text style={styles.roundingNote}>
-              Tidak habis dibagi rata. Sisa rupiahnya dibagikan supaya jumlahnya tetap persis{' '}
-              {formatRupiah(amount ?? 0)} — tidak ada rupiah yang hilang.
-            </Text>
-          ) : null}
+          <View style={styles.section}>
+            <SectionTitle>dibagi ke</SectionTitle>
+            <View style={styles.participantList}>
+              {members.map((member, index) => {
+                const included = !excluded.has(member.id);
+                const share = preview?.find((s) => s.memberId === member.id);
 
-          {participants.length === 0 ? (
-            <Text style={styles.warning}>Pilih minimal satu orang.</Text>
-          ) : null}
-        </View>
+                return (
+                  <Touchable key={member.id} onPress={() => toggleParticipant(member.id)}>
+                    <View
+                      style={[
+                        styles.participantRow,
+                        index < members.length - 1 && styles.participantRowBorder,
+                      ]}
+                    >
+                      <View style={[styles.checkbox, included && styles.checkboxOn]}>
+                        {included ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                      </View>
+                      <Text style={[styles.participantName, !included && styles.participantOff]}>
+                        {member.displayName}
+                      </Text>
+                      <Text style={[styles.participantShare, !included && styles.participantOff]}>
+                        {included && share ? formatRupiah(share.amount) : '—'}
+                      </Text>
+                    </View>
+                  </Touchable>
+                );
+              })}
+            </View>
 
-        {saveError ? <Text style={styles.warning}>{saveError}</Text> : null}
+            {preview && !isEvenlyDivisible(preview) ? (
+              <Text style={styles.roundingNote}>
+                Tidak habis dibagi rata. Sisa rupiahnya dibagikan supaya jumlahnya tetap persis{' '}
+                {formatRupiah(amount ?? 0)} — tidak ada rupiah yang hilang.
+              </Text>
+            ) : null}
 
-        <Button label={saving ? 'Menyimpan…' : 'Simpan'} onPress={save} disabled={!canSave} />
-      </ScrollView>
+            {participants.length === 0 ? (
+              <Text style={styles.warning}>Pilih minimal satu orang.</Text>
+            ) : null}
+          </View>
+
+          {saveError ? <Text style={styles.warning}>{saveError}</Text> : null}
+
+          <Button
+            label={saving ? 'Menyimpan…' : 'Simpan'}
+            onPress={save}
+            disabled={!canSave}
+            haptic="success"
+          />
+        </ScrollView>
+      </Screen>
+    </View>
   );
 }
 
@@ -198,15 +220,18 @@ function isEvenlyDivisible(shares: Array<{ amount: number }>): boolean {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: colors.bg },
   padded: { padding: spacing.lg },
-  content: { padding: spacing.lg, gap: spacing.xl },
-  section: { gap: spacing.sm },
+  content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
+  section: { gap: spacing.md },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+
+  /** Nominal adalah isian terpenting di layar ini, jadi hurufnya paling besar. */
+  amountInput: { ...type.title, fontSize: 26, paddingVertical: spacing.lg },
 
   participantList: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     paddingHorizontal: spacing.lg,
@@ -215,11 +240,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
+  },
+  participantRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   checkbox: {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
     borderRadius: radius.sm,
     borderWidth: 1.5,
     borderColor: colors.border,
@@ -229,9 +258,9 @@ const styles = StyleSheet.create({
   checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   checkboxMark: { ...type.caption, color: colors.textOnAccent, fontFamily: fonts.bold },
   participantName: { ...type.body, color: colors.text, flex: 1 },
-  participantShare: { ...type.body, color: colors.textMuted, fontVariant: ['tabular-nums'] },
+  participantShare: { ...type.bodyStrong, color: colors.textMuted },
   participantOff: { color: colors.textFaint },
 
-  roundingNote: { ...type.caption, color: colors.textMuted, lineHeight: 17 },
+  roundingNote: { ...type.caption, color: colors.textFaint },
   warning: { ...type.body, color: colors.negative },
 });

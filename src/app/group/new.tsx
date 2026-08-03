@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { createGroup } from '../../db/actions';
-import { Button, Field } from '../../ui/components';
+import { Button, Field, Screen, SectionTitle } from '../../ui/components';
+import { tapFeedback } from '../../ui/motion';
 import { colors, radius, spacing, type } from '../../ui/theme';
 
 export default function NewGroupScreen() {
@@ -34,85 +35,97 @@ export default function NewGroupScreen() {
   }
 
   return (
-    // Lihat catatan di layar pengeluaran: ruang untuk keyboard diserahkan ke sistem,
-    // bukan ditebak sendiri lewat KeyboardAvoidingView.
-    <ScrollView
-      style={styles.flex}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
-      automaticallyAdjustKeyboardInsets
-    >
-        <Field
-          label="Nama grup"
-          placeholder="Kos Keputih 3"
-          value={name}
-          onChangeText={setName}
-          autoFocus
-        />
+    <View style={styles.root}>
+      <Screen>
+        {/* Lihat catatan di layar pengeluaran: ruang untuk keyboard diserahkan ke
+            sistem, bukan ditebak sendiri lewat KeyboardAvoidingView. */}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets
+          showsVerticalScrollIndicator={false}
+        >
+          <Field
+            label="nama grup"
+            placeholder="Kos Keputih 3"
+            value={name}
+            onChangeText={setName}
+            autoFocus
+          />
 
-        <Field
-          label="Namamu"
-          placeholder="Efan"
-          value={myName}
-          onChangeText={setMyName}
-          hint="Dipakai untuk menghitung siapa berutang kepada siapa."
-        />
+          <Field
+            label="namamu"
+            placeholder="Efan"
+            value={myName}
+            onChangeText={setMyName}
+            hint="Dipakai untuk menghitung siapa berutang kepada siapa."
+          />
 
-        <View style={{ gap: spacing.sm }}>
-          <Text style={styles.label}>Anggota lain</Text>
-          <Text style={styles.hint}>
-            Mereka tidak perlu memasang aplikasi ini. Cukup namanya — nanti kalau mau, mereka bisa
-            bergabung dan mengambil alih catatannya.
-          </Text>
+          <View style={styles.section}>
+            <SectionTitle>anggota lain</SectionTitle>
+            <Text style={styles.hint}>
+              Mereka tidak perlu memasang aplikasi ini. Cukup namanya — nanti kalau mau, mereka
+              bisa bergabung dan mengambil alih catatannya.
+            </Text>
 
-          {others.map((value, index) => (
-            <Field
-              key={index}
-              label={`Orang ke-${index + 2}`}
-              placeholder="Nama"
-              value={value}
-              onChangeText={(text) =>
-                setOthers((prev) => prev.map((v, i) => (i === index ? text : v)))
-              }
-            />
-          ))}
+            {others.map((value, index) => (
+              <Field
+                key={index}
+                label={`orang ke-${index + 2}`}
+                placeholder="Nama"
+                value={value}
+                onChangeText={(text) =>
+                  setOthers((prev) => prev.map((v, i) => (i === index ? text : v)))
+                }
+              />
+            ))}
 
-          <Pressable
-            onPress={() => setOthers((prev) => [...prev, ''])}
-            style={({ pressed }) => [styles.addRow, pressed && { opacity: 0.6 }]}
-          >
-            <Text style={styles.addRowText}>+ Tambah orang</Text>
-          </Pressable>
-        </View>
+            <Pressable
+              onPress={() => {
+                tapFeedback('light');
+                setOthers((prev) => [...prev, '']);
+              }}
+              style={({ pressed }) => [styles.addRow, pressed && { opacity: 0.6 }]}
+            >
+              <Text style={styles.addRowText}>+ Tambah orang</Text>
+            </Pressable>
+          </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <View style={styles.summary}>
-          <Text style={styles.summaryText}>
-            {filledOthers.length === 0
-              ? 'Grup akan berisi kamu sendiri. Kamu tetap bisa menambah orang nanti.'
-              : `Grup akan berisi ${filledOthers.length + 1} orang: kamu, ${filledOthers.join(', ')}.`}
-          </Text>
-        </View>
+          <View style={styles.summary}>
+            <Text style={styles.summaryText}>
+              {filledOthers.length === 0
+                ? 'Grup akan berisi kamu sendiri. Kamu tetap bisa menambah orang nanti.'
+                : `Grup akan berisi ${filledOthers.length + 1} orang: kamu, ${filledOthers.join(', ')}.`}
+            </Text>
+          </View>
 
-        <Button label={saving ? 'Menyimpan…' : 'Buat grup'} onPress={save} disabled={!canSave} />
-      </ScrollView>
+          <Button
+            label={saving ? 'Menyimpan…' : 'Buat grup'}
+            onPress={save}
+            disabled={!canSave}
+            haptic="success"
+          />
+        </ScrollView>
+      </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, gap: spacing.lg },
-  label: { ...type.label, color: colors.textMuted },
-  hint: { ...type.caption, color: colors.textFaint, lineHeight: 17 },
+  root: { flex: 1, backgroundColor: colors.bg },
+  content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
+  section: { gap: spacing.md },
+  hint: { ...type.caption, color: colors.textFaint },
   addRow: { paddingVertical: spacing.sm },
   addRowText: { ...type.bodyStrong, color: colors.accent },
   summary: {
     backgroundColor: colors.accentSoft,
-    borderRadius: radius.md,
-    padding: spacing.md,
+    borderRadius: radius.sm,
+    padding: spacing.lg,
   },
-  summaryText: { ...type.caption, color: colors.accent, lineHeight: 18 },
+  summaryText: { ...type.caption, color: colors.accent },
   error: { ...type.body, color: colors.negative },
 });
