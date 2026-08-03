@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { perspectiveOf } from '../../../core/balance';
@@ -9,6 +9,7 @@ import { balancesOf, displayName, totalSpend } from '../../../core/selectors';
 import { deleteExpense } from '../../../db/actions';
 import { useGroup } from '../../../hooks/useGroups';
 import { Button, Card, EmptyState, ErrorNotice, Loading, Money, SectionTitle } from '../../../ui/components';
+import { confirm } from '../../../ui/confirm';
 import { colors, radius, spacing, type } from '../../../ui/theme';
 
 export default function GroupScreen() {
@@ -39,16 +40,15 @@ export default function GroupScreen() {
   const balances = balancesOf(state);
   const me = myMemberId ? perspectiveOf(balances, myMemberId) : null;
 
-  function confirmDelete(expense: Expense) {
+  async function confirmDelete(expense: Expense) {
     if (!myMemberId) return;
-    Alert.alert('Hapus pengeluaran?', `"${expense.description}" akan dihapus dari perhitungan.`, [
-      { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Hapus',
-        style: 'destructive',
-        onPress: () => void deleteExpense(db, state.id, myMemberId, expense.id),
-      },
-    ]);
+    const yes = await confirm({
+      title: 'Hapus pengeluaran?',
+      message: `"${expense.description}" akan dihapus dari perhitungan.`,
+      confirmLabel: 'Hapus',
+      destructive: true,
+    });
+    if (yes) await deleteExpense(db, state.id, myMemberId, expense.id);
   }
 
   return (
@@ -127,7 +127,7 @@ export default function GroupScreen() {
                   state={state}
                   expense={expense}
                   isLast={index === expenses.length - 1}
-                  onLongPress={() => confirmDelete(expense)}
+                  onLongPress={() => void confirmDelete(expense)}
                 />
               ))}
             </Card>

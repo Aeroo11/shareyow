@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { activeExpenses, activeSettlements } from '../../../core/ops';
 import { balancesOf, displayName, transfersOf } from '../../../core/selectors';
@@ -8,6 +8,7 @@ import { formatRupiah } from '../../../core/money';
 import { addSettlement } from '../../../db/actions';
 import { useGroup } from '../../../hooks/useGroups';
 import { Button, Card, EmptyState, ErrorNotice, Loading, Money, SectionTitle } from '../../../ui/components';
+import { confirm } from '../../../ui/confirm';
 import { colors, spacing, type } from '../../../ui/theme';
 
 export default function SettleScreen() {
@@ -43,19 +44,14 @@ export default function SettleScreen() {
 
   const naive = countDirectRepayments(state);
 
-  function markPaid(fromId: string, toId: string, amount: number) {
+  async function markPaid(fromId: string, toId: string, amount: number) {
     if (!myMemberId) return;
-    Alert.alert(
-      'Tandai sudah dibayar?',
-      `${displayName(state, fromId)} mengirim ${formatRupiah(amount)} ke ${displayName(state, toId)}.`,
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Sudah dibayar',
-          onPress: () => void addSettlement(db, state.id, myMemberId, { fromId, toId, amount }),
-        },
-      ],
-    );
+    const yes = await confirm({
+      title: 'Tandai sudah dibayar?',
+      message: `${displayName(state, fromId)} mengirim ${formatRupiah(amount)} ke ${displayName(state, toId)}.`,
+      confirmLabel: 'Sudah dibayar',
+    });
+    if (yes) await addSettlement(db, state.id, myMemberId, { fromId, toId, amount });
   }
 
   const settlements = activeSettlements(state);
@@ -109,7 +105,7 @@ export default function SettleScreen() {
                 <Button
                   label="Tandai sudah dibayar"
                   variant="secondary"
-                  onPress={() => markPaid(transfer.fromId, transfer.toId, transfer.amount)}
+                  onPress={() => void markPaid(transfer.fromId, transfer.toId, transfer.amount)}
                 />
               </Card>
             ))}

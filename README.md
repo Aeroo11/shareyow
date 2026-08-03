@@ -163,9 +163,30 @@ dalam milidetik tanpa perangkat, emulator, atau basis data.
 ```bash
 npm install
 npm start          # lalu pindai QR dengan Expo Go
-npm test           # 75 test
+npm run web        # buka di browser — basis kode yang sama
+npm test           # 83 test
 npm run typecheck
 ```
+
+### Target web
+
+Kode yang sama berjalan di browser lewat React Native Web. Ini bukan aplikasi
+kedua: tidak ada berkas yang digandakan, jadi setiap perbaikan otomatis berlaku
+di dua-duanya. Gunanya dua hal — memperpendek putaran pengembangan (menyimpan
+berkas lalu langsung melihat hasilnya tanpa menyentuh HP), dan menyediakan tautan
+demo yang bisa langsung diklik tanpa memasang apa pun.
+
+Dua tempat yang memang harus berbeda per platform, dan alasannya:
+
+| Berkas | Kenapa terpisah |
+|---|---|
+| `src/ui/confirm.ts` / `.web.ts` | React Native Web tidak pernah mengimplementasikan `Alert`. Memanggilnya di browser melempar TypeError, bukan sekadar diam — tombol Hapus akan mematikan aplikasi. Versi web memakai `window.confirm`. |
+| `metro.config.js` | Di browser tidak ada SQLite bawaan sistem, jadi expo-sqlite memuat versi WebAssembly. Perlu `.wasm` sebagai aset, plus header COEP/COOP supaya `SharedArrayBuffer` diizinkan browser. |
+
+**Batasnya harus jelas: web adalah alat bantu, bukan sasaran.** Dukungan web
+expo-sqlite masih alpha, dan basis data di browser terpisah sama sekali dari yang
+di HP. Apa pun yang terlihat benar di browser tetap wajib diperiksa ulang di HP
+sebelum dipercaya.
 
 Dikembangkan di Windows dengan iPhone lewat **Expo Go** — tanpa Mac, tanpa akun
 Apple Developer. Untuk teman-teman yang memakai Android, APK dibuat lewat EAS Build.
@@ -192,4 +213,10 @@ Ditulis di sini supaya jelas ini keputusan, bukan kelupaan:
 - **Integrasi pembayaran / QRIS** — jauh di luar cakupan, plus urusan kepatuhan
 - **Push notification** — Expo Go tidak mendukung remote push; tidak dibangun
   ketergantungan padanya
-- **Multi-mata uang, versi web, chat dalam grup, laporan bulanan**
+- **Multi-mata uang, chat dalam grup, laporan bulanan**
+
+> Catatan: "versi web" sempat masuk daftar ini, lalu dikeluarkan. Alasannya
+> berubah — yang ditolak dulu adalah *aplikasi web terpisah*. Menjalankan basis
+> kode yang sama di browser lewat React Native Web tidak menambah kode yang harus
+> dirawat, dan langsung membayar dua hal: putaran pengembangan yang jauh lebih
+> pendek, dan demo yang bisa diklik tanpa memasang apa pun.
