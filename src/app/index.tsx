@@ -76,7 +76,7 @@ function Totals({ owes, isOwed }: { owes: number; isOwed: number }) {
 }
 
 function GroupCard({ summary }: { summary: GroupSummary }) {
-  const { state, memberCount, owes, isOwed } = summary;
+  const { state, memberCount, expenseCount, owes, isOwed } = summary;
 
   return (
     <Link href={`/group/${state.id}`} asChild>
@@ -87,7 +87,7 @@ function GroupCard({ summary }: { summary: GroupSummary }) {
               {state.name}
             </Text>
             <Text style={styles.groupMeta}>
-              {memberCount} orang · {state.expenses.size} catatan
+              {memberCount} orang · {expenseCount} catatan
             </Text>
           </View>
 

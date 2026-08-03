@@ -81,7 +81,16 @@ export default function GroupScreen() {
         </Card>
 
         <View style={styles.section}>
-          <SectionTitle>Saldo tiap orang</SectionTitle>
+          <View style={styles.sectionHeader}>
+            <SectionTitle>Saldo tiap orang</SectionTitle>
+            <Pressable
+              onPress={() => router.push(`/group/${state.id}/members`)}
+              hitSlop={8}
+              style={({ pressed }) => pressed && { opacity: 0.6 }}
+            >
+              <Text style={styles.sectionAction}>Kelola</Text>
+            </Pressable>
+          </View>
           <Card style={{ gap: spacing.md }}>
             {activeMembers(state).map((member) => {
               const value = balances.get(member.id) ?? 0;
@@ -123,6 +132,9 @@ export default function GroupScreen() {
               ))}
             </Card>
           )}
+          {expenses.length > 0 ? (
+            <Text style={styles.listHint}>Tekan lama sebuah catatan untuk menghapusnya.</Text>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -220,6 +232,9 @@ const styles = StyleSheet.create({
   mePillTextNeutral: { ...type.body, color: colors.textMuted },
 
   section: { gap: spacing.sm },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionAction: { ...type.label, color: colors.accent },
+  listHint: { ...type.caption, color: colors.textFaint, paddingHorizontal: spacing.xs },
   balanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   memberName: { ...type.body, color: colors.text, flexShrink: 1 },
 

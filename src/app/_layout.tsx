@@ -30,6 +30,10 @@ export default function RootLayout() {
             <Stack.Screen name="group/[id]/index" options={{ title: '' }} />
             <Stack.Screen name="group/[id]/settle" options={{ title: 'Selesaikan' }} />
             <Stack.Screen
+              name="group/[id]/members"
+              options={{ title: 'Anggota', presentation: 'modal' }}
+            />
+            <Stack.Screen
               name="group/[id]/expense/new"
               options={{ title: 'Pengeluaran baru', presentation: 'modal' }}
             />

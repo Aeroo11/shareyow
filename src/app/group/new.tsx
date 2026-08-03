@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { createGroup } from '../../db/actions';
 import { Button, Field } from '../../ui/components';
@@ -34,11 +34,15 @@ export default function NewGroupScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
+    // Lihat catatan di layar pengeluaran: ruang untuk keyboard diserahkan ke sistem,
+    // bukan ditebak sendiri lewat KeyboardAvoidingView.
+    <ScrollView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      automaticallyAdjustKeyboardInsets
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Field
           label="Nama grup"
           placeholder="Kos Keputih 3"
@@ -94,7 +98,6 @@ export default function NewGroupScreen() {
 
         <Button label={saving ? 'Menyimpan…' : 'Buat grup'} onPress={save} disabled={!canSave} />
       </ScrollView>
-    </KeyboardAvoidingView>
   );
 }
 

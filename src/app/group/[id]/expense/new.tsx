@@ -1,20 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { formatRupiah, parseRupiah } from '../../../../core/money';
 import { activeMembers } from '../../../../core/ops';
 import { computeShares } from '../../../../core/split';
 import { addExpense } from '../../../../db/actions';
+import { newId } from '../../../../db/ids';
 import { useGroup } from '../../../../hooks/useGroups';
 import { Button, Chip, ErrorNotice, Field, Loading, SectionTitle } from '../../../../ui/components';
 import { colors, radius, spacing, type } from '../../../../ui/theme';
@@ -32,6 +25,11 @@ export default function NewExpenseScreen() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Dibuat sekali saat form dibuka, lalu dipakai untuk dua hal yang harus cocok:
+  // seed pratinjau pembagian di bawah, dan id pengeluaran yang disimpan. Kalau
+  // keduanya berbeda, angka yang dilihat pengguna bisa berbeda dari yang tercatat.
+  const [expenseId] = useState(newId);
+
   const members = data ? activeMembers(data.state) : [];
   const amount = parseRupiah(amountText);
 
@@ -44,11 +42,11 @@ export default function NewExpenseScreen() {
   const preview = useMemo(() => {
     if (amount === null || amount < 0 || participants.length === 0) return null;
     try {
-      return computeShares(amount, participants, { kind: 'equal' }, 'pratinjau');
+      return computeShares(amount, participants, { kind: 'equal' }, expenseId);
     } catch {
       return null;
     }
-  }, [amount, participants.join(',')]);
+  }, [amount, participants.join(','), expenseId]);
 
   if (loading) return <Loading />;
   if (error) {
@@ -59,6 +57,11 @@ export default function NewExpenseScreen() {
     );
   }
   if (!data) return null;
+
+  // authorId = siapa yang MENCATAT, bukan siapa yang membayar. Keduanya sering orang
+  // yang sama, tapi tidak selalu — dan begitu sinkronisasi masuk, "siapa yang menulis
+  // operasi ini" jadi pertanyaan yang punya jawaban penting.
+  const authorId = data.myMemberId ?? effectivePayerId;
 
   const amountError =
     amountText.trim().length > 0 && amount === null ? 'Nominal tidak terbaca' : null;
@@ -75,7 +78,7 @@ export default function NewExpenseScreen() {
     setSaving(true);
     setSaveError(null);
     try {
-      await addExpense(db, id, effectivePayerId, {
+      await addExpense(db, id, authorId ?? effectivePayerId, expenseId, {
         description: description.trim(),
         total: amount,
         payerId: effectivePayerId,
@@ -100,11 +103,18 @@ export default function NewExpenseScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
+    // automaticallyAdjustKeyboardInsets menyisipkan ruang untuk keyboard dari sisi
+    // sistem, jadi tidak perlu menebak tinggi header seperti KeyboardAvoidingView
+    // — tebakan yang justru meleset pada layar bermodal seperti ini.
+    // keyboardDismissMode="on-drag" penting karena papan angka iOS tidak punya
+    // tombol untuk menutup dirinya sendiri.
+    <ScrollView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      automaticallyAdjustKeyboardInsets
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Field
           label="Untuk apa"
           placeholder="Galon + gas"
@@ -180,7 +190,6 @@ export default function NewExpenseScreen() {
 
         <Button label={saving ? 'Menyimpan…' : 'Simpan'} onPress={save} disabled={!canSave} />
       </ScrollView>
-    </KeyboardAvoidingView>
   );
 }
 

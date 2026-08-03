@@ -61,6 +61,21 @@ export function useDbQuery<T>(
   const runRef = useRef(run);
   runRef.current = run;
 
+  // Membedakan "kueri berganti sasaran" dari "isi database berubah".
+  //
+  // Saat berpindah grup, deps berubah dan data lama harus dibuang — kalau tidak,
+  // layar grup baru sempat menampilkan angka milik grup sebelumnya. Sedangkan saat
+  // ada pengeluaran baru, yang naik hanya `rev`; data lama justru harus dipertahankan
+  // supaya layar tidak berkedip kembali ke kondisi memuat setiap kali menyimpan.
+  const depsKey = JSON.stringify(deps);
+  const lastDepsKey = useRef(depsKey);
+  if (lastDepsKey.current !== depsKey) {
+    lastDepsKey.current = depsKey;
+    // Aman dipanggil saat render: React membuang hasil render ini dan mengulang
+    // seketika, sehingga data grup lama tidak pernah sempat tampil sama sekali.
+    setState({ data: undefined, loading: true, error: null });
+  }
+
   useEffect(() => {
     // Jawaban dari kueri yang sudah kedaluwarsa harus dibuang. Tanpa penjaga
     // ini, hasil lama yang datang terlambat bisa menimpa hasil baru.
@@ -84,8 +99,11 @@ export function useDbQuery<T>(
     return () => {
       active = false;
     };
+    // depsKey dipakai alih-alih menyebar `deps` langsung: panjang daftar dependensi
+    // harus tetap sama di setiap render, dan menyebar array milik pemanggil tidak
+    // menjamin itu.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, rev, manualRefresh, ...deps]);
+  }, [db, rev, manualRefresh, depsKey]);
 
   const refresh = useCallback(() => setManualRefresh((n) => n + 1), []);
 

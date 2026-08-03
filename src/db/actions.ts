@@ -112,11 +112,21 @@ export async function addExpense(
   db: SQLiteDatabase,
   groupId: string,
   authorId: MemberId,
+  /**
+   * Id dibuat di layar form, bukan di sini — dan itu bukan detail sepele.
+   *
+   * Id ini juga menjadi seed pembagian sisa rupiah (lihat computeShares), jadi
+   * pratinjau yang ditampilkan di form dan bagian yang akhirnya tersimpan wajib
+   * memakai id yang sama persis. Membuat id di dalam fungsi ini membuat keduanya
+   * mustahil disamakan.
+   *
+   * Bonusnya: tombol Simpan yang tertekan dua kali menghasilkan id yang sama, dan
+   * INSERT OR IGNORE di repository membuat penyimpanan kedua tidak berpengaruh.
+   */
+  expenseId: string,
   fields: ExpenseFields,
-): Promise<string> {
-  const expenseId = newId();
+): Promise<void> {
   await commit(db, [build('expense.add', groupId, authorId, { expenseId, ...fields })]);
-  return expenseId;
 }
 
 export async function editExpense(

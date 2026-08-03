@@ -159,6 +159,18 @@ describe('sisa pembulatan berpindah antar pengeluaran', () => {
     expect(penerima.size).toBeGreaterThan(1);
   });
 
+  it('seed yang berbeda memberi pembagian yang berbeda — jadi seed tidak boleh dikarang', () => {
+    // Konsekuensi praktisnya: pratinjau di layar form WAJIB memakai id pengeluaran
+    // yang sebenarnya akan disimpan. Memakai seed karangan seperti 'pratinjau'
+    // membuat layar menjanjikan pembagian yang berbeda dari yang tercatat.
+    const hasil = new Set(
+      Array.from({ length: 20 }, (_, i) =>
+        JSON.stringify(computeShares(10_000, memberIds(3), { kind: 'equal' }, `id-${i}`)),
+      ),
+    );
+    expect(hasil.size).toBeGreaterThan(1);
+  });
+
   it('tetap deterministik: seed yang sama selalu memberi hasil yang sama', () => {
     // Syarat mutlak agar semua HP menghitung angka yang identik dari op log
     // yang sama, tanpa perlu saling bertanya.
