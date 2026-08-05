@@ -11,7 +11,7 @@ select
 
   case when (
     select count(*) from pg_policies where schemaname = 'public'
-  ) = 10 then 'ok' else 'KURANG' end as policy_10,
+  ) = 11 then 'ok' else 'KURANG' end as policy_11,
 
   case when (
     select count(*) from information_schema.routines

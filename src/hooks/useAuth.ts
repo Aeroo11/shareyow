@@ -42,6 +42,45 @@ export function useAuth(): AuthState {
   return { session, loading, configured: isSyncConfigured };
 }
 
+/**
+ * Menerjemahkan pesan Supabase menjadi kalimat yang menyebutkan apa yang harus
+ * dilakukan.
+ *
+ * "Email not confirmed" adalah yang paling sering muncul dan paling membingungkan
+ * saat pengembangan: akunnya sebenarnya berhasil dibuat, tautan konfirmasinya
+ * dikirim ke email, dan layanan email bawaan Supabase dibatasi sekitar dua email
+ * per jam pada proyek gratis — jadi tautannya sering tidak pernah sampai. Pesan
+ * aslinya tidak menyebut satu pun dari itu.
+ */
+function explain(error: unknown): Error {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (/email not confirmed/i.test(message)) {
+    return new Error(
+      'Akunnya sudah ada, tapi emailnya belum dikonfirmasi. Saat pengembangan, ' +
+        'matikan Confirm email di dasbor Supabase: Authentication → Sign In / Providers → ' +
+        'Email. Nyalakan lagi sebelum rilis.',
+    );
+  }
+  if (/invalid login credentials/i.test(message)) {
+    return new Error('Email atau kata sandinya salah.');
+  }
+  if (/password should be at least/i.test(message)) {
+    return new Error('Kata sandi minimal 6 karakter.');
+  }
+  if (/user already registered/i.test(message)) {
+    return new Error('Email ini sudah terdaftar. Coba masuk saja.');
+  }
+  if (/rate limit|too many requests/i.test(message)) {
+    return new Error(
+      'Terlalu sering mencoba. Layanan email bawaan Supabase dibatasi sekitar dua ' +
+        'email per jam — tunggu sebentar, atau matikan Confirm email supaya tidak ada ' +
+        'email yang perlu dikirim sama sekali.',
+    );
+  }
+  return error instanceof Error ? error : new Error(message);
+}
+
 export async function signIn(email: string, password: string): Promise<void> {
   const client = getSupabase();
   if (!client) throw new Error('Sinkronisasi belum diatur');
@@ -50,7 +89,18 @@ export async function signIn(email: string, password: string): Promise<void> {
     email: email.trim(),
     password,
   });
-  if (error) throw error;
+  if (error) throw explain(error);
+}
+
+/** Dilempar saat akun berhasil dibuat tapi belum bisa dipakai karena menunggu konfirmasi. */
+export class NeedsEmailConfirmation extends Error {
+  constructor() {
+    super(
+      'Akun dibuat, tapi belum bisa dipakai sampai emailnya dikonfirmasi. Saat ' +
+        'pengembangan, matikan Confirm email di dasbor Supabase: Authentication → ' +
+        'Sign In / Providers → Email, lalu masuk di sini. Nyalakan lagi sebelum rilis.',
+    );
+  }
 }
 
 export async function signUp(email: string, password: string, displayName: string): Promise<void> {
@@ -62,14 +112,22 @@ export async function signUp(email: string, password: string, displayName: strin
     password,
     options: { data: { display_name: displayName.trim() } },
   });
-  if (error) throw error;
+  if (error) throw explain(error);
 
-  // Kalau konfirmasi email menyala, sesi belum ada sampai tautannya diklik.
-  // Profil baru bisa dibuat setelah itu — dan itu bukan kegagalan.
-  if (data.session) {
-    await client
-      .from('profiles')
-      .upsert({ id: data.session.user.id, display_name: displayName.trim() });
+  // Tidak ada sesi berarti Supabase menunggu tautan konfirmasi diklik. Ini
+  // dilaporkan sebagai kegagalan yang menjelaskan dirinya, bukan sebagai
+  // keberhasilan — karena dari sudut pandang pengguna, ia belum bisa masuk.
+  if (!data.session) throw new NeedsEmailConfirmation();
+
+  const profile = await client
+    .from('profiles')
+    .upsert({ id: data.session.user.id, display_name: displayName.trim() });
+
+  // Profil hanya keterangan tambahan; kegagalannya tidak boleh membatalkan
+  // pendaftaran yang sebenarnya sudah berhasil. Tapi ia juga tidak boleh hilang
+  // tanpa jejak seperti sebelumnya — dulu hasilnya tidak diperiksa sama sekali.
+  if (profile.error) {
+    console.warn('Profil gagal disimpan, tapi akunnya sudah jadi:', profile.error.message);
   }
 }
 

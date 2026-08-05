@@ -39,11 +39,11 @@ export async function syncGroup(
 
   // Grup dibuat di HP jauh sebelum ada akun — itu memang inti produknya. Barisnya
   // di server baru dibuat sekarang, saat sinkronisasi pertama kali berjalan.
-  await transport.ensureGroup({
-    groupId,
-    name: state.name,
-    myMemberId: myMemberId ?? groupId,
-  });
+  // myMemberId boleh null: grup yang baru digabung belum tahu "yang mana aku"
+  // sampai pengguna memilihnya. Sebelumnya di sini ada `?? groupId`, yang
+  // menuliskan id GRUP ke kolom id ANGGOTA — sekadar mengisi kolom dengan
+  // sesuatu, dan itu justru cara paling halus menyimpan data yang salah.
+  await transport.ensureGroup({ groupId, name: state.name, myMemberId });
 
   const pending = opsToPush(localOps);
   if (pending.length > 0) {

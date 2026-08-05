@@ -78,13 +78,33 @@ export class SupabaseTransport {
    * produknya. Jadi saat sinkronisasi pertama kali dinyalakan, barisnya baru
    * dibuat di sini. Idempoten, karena ia dipanggil setiap kali menyinkron.
    */
-  async ensureGroup(input: { groupId: string; name: string; myMemberId: string }): Promise<void> {
+  async ensureGroup(input: {
+    groupId: string;
+    name: string;
+    /** null kalau grup ini baru digabung dan belum dipilih "yang mana aku". */
+    myMemberId: string | null;
+  }): Promise<void> {
     const uid = await this.userId();
 
+    // `ignoreDuplicates` bukan sekadar penghematan — ia yang membuat penyinkronan
+    // KEDUA tidak gagal. Tanpanya, upsert menjadi ON CONFLICT DO UPDATE, dan
+    // tabel `groups` sengaja tidak punya policy UPDATE, jadi setiap sinkronisasi
+    // setelah yang pertama akan ditolak RLS.
+    //
+    // Sekaligus melindungi hal lain: anggota yang bergabung ke grup orang lain
+    // tidak menimpa `created_by` milik pembuatnya.
     const group = await this.db
       .from('groups')
-      .upsert({ id: input.groupId, name: input.name, created_by: uid }, { onConflict: 'id' });
+      .upsert(
+        { id: input.groupId, name: input.name, created_by: uid },
+        { onConflict: 'id', ignoreDuplicates: true },
+      );
     if (group.error) throw group.error;
+
+    // Baris akses justru memang perlu diperbarui — di sinilah klaim anggota
+    // bayangan dicatat. Karena itu group_access punya policy UPDATE untuk baris
+    // milik sendiri, sementara groups tidak.
+    if (input.myMemberId === null) return;
 
     const access = await this.db
       .from('group_access')

@@ -187,6 +187,13 @@ drop policy if exists "keanggotaan grup yang diikuti" on public.group_access;
 create policy "keanggotaan grup yang diikuti" on public.group_access
   for select using (public.is_member(group_id));
 
+-- Dibutuhkan saat seseorang mengklaim anggota bayangan miliknya: barisnya sudah
+-- dibuat join_group(), lalu member_id-nya diperbarui setelah ia memilih "yang mana
+-- aku". Hanya barisnya sendiri, dan tetap harus barisnya sendiri sesudah diubah.
+drop policy if exists "perbarui keanggotaan sendiri" on public.group_access;
+create policy "perbarui keanggotaan sendiri" on public.group_access
+  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+
 -- Telur dan ayam: saat membuat grup, pembuatnya belum menjadi anggota, sehingga
 -- is_member() masih false dan ia tidak akan pernah bisa memasukkan dirinya
 -- sendiri. Policy ini yang memutusnya — hanya untuk pembuat grup, hanya untuk

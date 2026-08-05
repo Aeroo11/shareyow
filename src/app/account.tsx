@@ -46,11 +46,8 @@ export default function AccountScreen() {
         await signIn(email, password);
       } else {
         await signUp(email, password, displayName);
-        setNotice(
-          'Akun dibuat. Kalau konfirmasi email menyala di proyek Supabase-mu, buka emailmu dulu ' +
-            'lalu masuk di sini.',
-        );
-        setMode('signIn');
+        // Sampai di sini berarti sesinya langsung ada — tidak perlu apa-apa lagi.
+        setNotice('Akun dibuat dan kamu sudah masuk.');
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
