@@ -10,7 +10,7 @@ import {
   pendingOps,
   setIdentity,
 } from '../repository';
-import { openTestDatabase } from './sqlite-adapter';
+import { openTestDatabase, openWebLikeDatabase } from './sqlite-adapter';
 
 const GROUP = 'grup-kos';
 
@@ -147,6 +147,64 @@ describe('antrean kirim', () => {
 
     const row = await db.getFirstAsync<{ seq: number }>('SELECT seq FROM ops WHERE id = ?', 'op1');
     expect(row?.seq).toBe(5);
+  });
+});
+
+describe('jalur web: tanpa withExclusiveTransactionAsync', () => {
+  // Regresi. expo-sqlite di web melempar error untuk transaksi eksklusif, dan
+  // repository memakainya untuk setiap penulisan — jadi menyimpan apa pun di
+  // browser gagal total. Bug itu lolos justru karena jalur web tidak pernah
+  // dijalankan test; sekarang dijalankan, tanpa perlu browser sama sekali.
+
+  /** Modul dimuat ulang supaya deteksi dukungannya kembali ke keadaan awal. */
+  function freshRepository(): typeof import('../repository') {
+    let loaded!: typeof import('../repository');
+    jest.isolateModules(() => {
+      loaded = require('../repository');
+    });
+    return loaded;
+  }
+
+  it('menyimpan dan membaca kembali dengan mundur ke transaksi biasa', async () => {
+    const repo = freshRepository();
+    const db = openWebLikeDatabase();
+    await migrate(db);
+
+    await repo.appendOps(db, seedOps());
+    const state = (await repo.loadGroup(db, GROUP))!;
+
+    expect(state.name).toBe('Kos Keputih');
+    expect(activeExpenses(state)).toHaveLength(1);
+
+    db.closeSync();
+  });
+
+  it('tetap idempoten — inilah yang menjaga dari operasi ganda, bukan kunci transaksinya', async () => {
+    const repo = freshRepository();
+    const db = openWebLikeDatabase();
+    await migrate(db);
+
+    await repo.appendOps(db, seedOps());
+    await repo.appendOps(db, seedOps());
+
+    const row = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM ops');
+    expect(row?.n).toBe(4);
+
+    db.closeSync();
+  });
+
+  it('antrean kirim tetap terkuras', async () => {
+    const repo = freshRepository();
+    const db = openWebLikeDatabase();
+    await migrate(db);
+
+    await repo.appendOps(db, [op('op9', 'member.add', { memberId: 'm9', displayName: 'Web' }, null)]);
+    expect(await repo.countPendingOps(db)).toBe(1);
+
+    await repo.markSynced(db, [{ id: 'op9', seq: 12 }]);
+    expect(await repo.countPendingOps(db)).toBe(0);
+
+    db.closeSync();
   });
 });
 

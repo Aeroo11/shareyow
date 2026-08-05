@@ -8,7 +8,67 @@
  */
 
 import type { SQLiteDatabase } from 'expo-sqlite';
+
 import { fold, type GroupState, type Op } from '../core/ops';
+
+/** Sebagian kecil SQLiteDatabase yang benar-benar dipakai di dalam transaksi. */
+type TransactionRunner = Pick<SQLiteDatabase, 'runAsync'>;
+
+/**
+ * `withExclusiveTransactionAsync` melempar error seketika di web. Sekali gagal,
+ * ia tidak akan pernah berhasil pada sesi ini — jadi jawabannya diingat alih-alih
+ * dicoba ulang di setiap penulisan.
+ */
+let exclusiveSupported = true;
+
+/**
+ * Menjalankan beberapa penulisan sebagai satu transaksi.
+ *
+ * Versi eksklusif memakai koneksi terpisah dan menyerialkan seluruh penulisan,
+ * jadi ia yang dipakai kalau tersedia. Di browser ia tidak ada, dan yang tersisa
+ * adalah `withTransactionAsync` — tetap memberi BEGIN/COMMIT, tapi bisa disela
+ * kueri lain pada koneksi yang sama.
+ *
+ * Dukungan itu dideteksi dari perilakunya, bukan dari `Platform.OS`. Alasannya
+ * bukan gaya: berkas ini diuji terhadap SQLite sungguhan lewat `node:sqlite`,
+ * dan mengimpor react-native ke sini akan mematikan seluruh test itu. Batas
+ * "lapisan penyimpanan tidak tahu ia sedang berjalan di mana" yang membuatnya
+ * bisa diuji tanpa perangkat sama sekali.
+ *
+ * Aman dicoba lalu ditarik mundur karena error-nya dilempar di baris pertama,
+ * sebelum satu pun SQL dijalankan — tidak ada pekerjaan separuh jadi yang
+ * ditinggalkan.
+ *
+ * Konsekuensi kehilangan eksklusivitas di web sudah ditimbang: yang bisa terjadi
+ * hanyalah sebuah pembacaan melihat satu batch yang baru separuh masuk, dan itu
+ * memperbaiki dirinya sendiri pada penyegaran berikutnya. Yang tidak mungkin
+ * terjadi adalah operasi ganda — kunci utama pada `ops.id` ditambah
+ * `INSERT OR IGNORE` yang menjaganya, bukan tingkat isolasi transaksinya.
+ */
+async function inTransaction(
+  db: SQLiteDatabase,
+  task: (tx: TransactionRunner) => Promise<void>,
+): Promise<void> {
+  if (exclusiveSupported) {
+    try {
+      await db.withExclusiveTransactionAsync(async (txn) => {
+        await task(txn);
+      });
+      return;
+    } catch (error) {
+      if (!isUnsupported(error)) throw error;
+      exclusiveSupported = false;
+    }
+  }
+
+  await db.withTransactionAsync(async () => {
+    await task(db);
+  });
+}
+
+function isUnsupported(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('not supported on web');
+}
 
 interface OpRow {
   id: string;
@@ -44,7 +104,7 @@ function rowToOp(row: OpRow): Op {
 export async function appendOps(db: SQLiteDatabase, ops: Op[]): Promise<void> {
   if (ops.length === 0) return;
 
-  await db.withExclusiveTransactionAsync(async (txn) => {
+  await inTransaction(db, async (txn) => {
     for (const op of ops) {
       await txn.runAsync(
         `INSERT OR IGNORE INTO ops (id, group_id, seq, type, author_id, client_ts, payload)
@@ -68,7 +128,7 @@ export async function markSynced(
 ): Promise<void> {
   if (acks.length === 0) return;
 
-  await db.withExclusiveTransactionAsync(async (txn) => {
+  await inTransaction(db, async (txn) => {
     for (const ack of acks) {
       await txn.runAsync('UPDATE ops SET seq = ? WHERE id = ? AND seq IS NULL', ack.seq, ack.id);
     }
